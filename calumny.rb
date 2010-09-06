@@ -22,7 +22,7 @@ class ViewServlet < javax.servlet.http.HttpServlet
 <script type="text/javascript">
 var list=[];
 var timeout;
-var xhr = new XMLHttpRequest(); //still need to replace with dojo version
+xhr=dojo._xhrObj()
 function stop() { window.clearTimeout(timeout); xhr.onreadystatechange=replac; }
 function replac() {
   if (xhr.readyState == 4){
@@ -69,7 +69,7 @@ dojo.addOnLoad(function()
       response.writer.println(@gson.toJson({:ih=>"<pre>#{re}</pre><b>Response Time=#{@response}</b>"}))
       request.handled = true
     rescue Exception=>e
-      puts e
+      puts e,e.backtrace
     end
     @response=(Time.now - start).to_s
   end
