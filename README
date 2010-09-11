@@ -1,4 +1,8 @@
-Requires Voldemort, Gson, and JRuby 
-License is Affero GPL3
-Website is http://calumnymmo.wordpress.com/
+http://calumnymmo.wordpress.com/
+Requires Voldemort, Gson, and JRuby. 
 
+The entire source code is offered only under the Affero GPL3 license.
+
+David Gervais's tiles, as found in static/tiles are copyrighted by him,
+and released under the Creative Commons license.
+http://pousse.rapiere.free.fr/tome/tome-tiles.htm

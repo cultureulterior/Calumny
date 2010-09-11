@@ -36,5 +36,5 @@ module Vold #utility functions for jruby voldemort- could eventually be javaized
         t.delete(@value);
         return t
       end
-    end
+    end 
 end
