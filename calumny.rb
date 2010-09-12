@@ -20,13 +20,13 @@ class ViewServlet < javax.servlet.http.HttpServlet
   end
   def doGet(request, response)
     input = request.getParameter('input') #main page
-    response.writer.println('<html><head><title>Calumny</title>
-<style>div,pre { font-family: Courier, monospace; border: .1em dotted black; display: table; }</style>
-<script src="static/dojo.js" type="text/javascript"></script>
+    response.writer.println('<html><head><title>Calumny</title><style>
+pre { font-family: Courier, monospace; display: table;}
+</style><script src="static/dojo.js" type="text/javascript"></script>
 <script type="text/javascript">
 var img=[]; for(var i in [0,1,2,3,4,5,6,7,8]) {img[i]=new Image();img[i].src="static/tiles/"+i+".png"}
 asc=[" ","#",".","w","d","o","@","M","$","t"]; //cache basic replacement images and characters.
-var list=[]; var data=null;
+var list=[]; var data=null; var whichview="canvas";
 var timeout; var timeagain=true; keyconn=null;
 xhr=dojo._xhrObj();
 function connectkey() { if(keyconn==null) {keyconn=dojo.connect(document.documentElement, "onkeypress", this, doKey);} }
@@ -34,27 +34,44 @@ function stop()  { timeagain=false; timer(); dojo.disconnect(keyconn); keyconn=n
 function start()  { timeagain=true; timer(); connectkey();}
 function timer()  { window.clearTimeout(timeout); if (timeagain) {timeout=window.setTimeout ("doEvt([\'time\',1000])", 1000);} }
 function logout() { doEvt(["logout"]); }
+function ascii() { whichview="ascii"; }
+function canvas() { whichview="canvas"; }
+function webgl() { whichview="webgl"; }
+function setdata() { dojo.byId("upload").innerHTML=data; dojo.byId("char").innerHTML=""; }
 function login() { doEvt(["login",dojo.byId("lu").value,dojo.byId("lp").value]); }
 function creat() { doEvt(["create",dojo.byId("cu").value,dojo.byId("cp").value]); }
 function asciiview() {
-   view=data["view"]
-   if(view==null)
-   { dojo.byId("upload").innerHTML="<div id=error>Error: No View Data</div>" }
+   view=data["view"];mview=[];
+   if(view==null) { dojo.byId("upload").innerHTML="<div id=error>Error: No View Data</div>" }
    else {  
      for(var i=0; i<view.length;i++)
        {for(var j=0; j<view[i].length;j++)
          { var contents=view[i][j];
            view[i][j]=asc[contents[contents.length-1]];}
            view[i]=view[i].join(""); }
-     dojo.byId("upload").innerHTML=("<pre>"+view.join("\n")+"<pre>"+data["after"]); }
+     dojo.byId("upload").innerHTML=("<pre id=asc>"+view.join("\n")+"</pre>");
+     dojo.byId("char").innerHTML=("<div id=char>"+data["after"]+"</div>");
+  }
 }
-function setdata() { dojo.byId("upload").innerHTML=data; }
-function canvasview() {}
+function canvasview() {
+   view=data["view"]
+   if(view==null) { dojo.byId("upload").innerHTML="<div id=error>Error: No View Data</div>" }
+   else {
+     if(dojo.byId("draw")==null)
+       { dojo.byId("upload").innerHTML=("<canvas id=draw width=800 height=608><canvas>"); }
+     dojo.byId("char").innerHTML=("<div id=char>"+data["after"]+"</div>");
+     var ctx=document.getElementById("draw").getContext("2d");
+     for(var i=0; i<view.length;i++)
+       {for(var j=0; j<view[i].length;j++)
+         {for(var k=0; k<view[i][j].length;k++)
+            ctx.drawImage(img[view[i][j][k]],j*32,i*32); 
+   }}}
+}
 function webglview() {}
+function viewfn() { if(whichview=="canvas") {canvasview();} else {asciiview();} }
 function replac() {
   if (xhr.readyState == 4){
       ret=JSON.parse(xhr.responseText); // dojo fromjson tojson replaced due to speed
-      //dojo.byId("upload").innerHTML=ret["ih"];
       data=ret["data"];
       eval(ret["js"]);
       if(list.length>0) { doEvt(list.pop()); }
@@ -73,11 +90,15 @@ dojo.addOnLoad(function()
 { connectkey();
   xhr.onreadystatechange=replac; 
   doEvt(["init"]); });
-</script></head>
-<body><h5>calumny</h5><div id="upload"></div><div id="control">
+</script></head><body>
+<div id="upload"></div><div id="char"></div>
+<div id="control">
 <button type="button" onclick="stop()" >stop client</button>
 <button type="button" onclick="start()" >start client</button>
 <button type="button" onclick="logout()" >logout client</button>
+<button type="button" onclick="ascii()" >ascii</button>
+<button type="button" onclick="canvas()" >canvas</button>
+<button type="button" onclick="webgl()" >canvas</button>
 </div></body></html>')
     request.handled = true
   end
@@ -91,7 +112,7 @@ dojo.addOnLoad(function()
           @rl.move(input[1],id)
         end
         re=@rl.rlview(id)
-        response.writer.println(@gson.toJson({:js=>'start();asciiview();',:data=>{:view=>re,:after=>"Response Time=#{(Time.now - start).to_s}\nUsername=#{username}\nLocation=#{@rl.location(id).to_s}"}}))
+        response.writer.println(@gson.toJson({:js=>'start();viewfn();',:data=>{:view=>re,:after=>"Response Time=#{(Time.now - start).to_s}, Username=#{username}, Location=#{@rl.location(id).to_s}"}}))
       elsif ( input[0]=="login" or input[0]=="create" ) and input.length==3 and (username=input[1].gsub(/\W+/,""))!="" and (password=input[2])!="" #if user does not exist or is not logged in, but we got a login string
         puts "Logging in"
         val=@rl.spawn([username,password]) #login or create user, depending if user was known
@@ -101,7 +122,7 @@ dojo.addOnLoad(function()
         cookie.version=1
         response.addCookie(cookie)
         re=@rl.rlview(val) 
-        response.writer.println(@gson.toJson({:js=>'start();asciiview();',:data=>{:view=>re,:after=>"Response Time=#{(Time.now - start).to_s}\nUsername=#{username}\nLocation=#{@rl.location(val).to_s}"}}))
+        response.writer.println(@gson.toJson({:js=>'start();viewfn();',:data=>{:view=>re,:after=>"Response Time=#{(Time.now - start).to_s}\nUsername=#{username}\nLocation=#{@rl.location(val).to_s}"}}))
       else # show login
         response.writer.println(@gson.toJson({:data=>'
 <div id="up">
